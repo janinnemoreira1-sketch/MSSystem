@@ -1,0 +1,97 @@
+{
+  "project_name": "CrediFlux - Gestão Inteligente de Empréstimos Pessoais",
+  "app_type": "dashboard / saas_app",
+  "theme_mode": "dark_primary_with_toggle",
+  "target_audience": "Personal money lenders, informal creditors, micro-finance managers in Brazil/Portugal requiring fast, reliable loan and payment tracking in Portuguese",
+  "typography": {
+    "heading_font": "Outfit, Cabinet Grotesk, sans-serif",
+    "body_font": "DM Sans, system-ui, sans-serif",
+    "financial_data_font": "JetBrains Mono, Courier New, monospace",
+    "hierarchy": {
+      "h1_dashboard_title": "text-2xl sm:text-3xl font-bold tracking-tight text-white",
+      "h2_section_heading": "text-xl sm:text-2xl font-semibold tracking-tight text-slate-100",
+      "h3_card_title": "text-base sm:text-lg font-medium text-slate-200",
+      "metric_large": "text-2xl sm:text-3xl font-extrabold tracking-tight font-mono text-white",
+      "body_regular": "text-sm sm:text-base font-normal text-slate-300 leading-relaxed",
+      "caption_small": "text-xs font-medium text-slate-400 uppercase tracking-wider"
+    }
+  },
+  "colors": {
+    "archetype": "THE PERFORMANCE FINANCIAL COMMAND CENTER (Azul e Preto)",
+    "background_main": "#060A12",
+    "background_surface_dark": "#0B132B",
+    "background_card": "#111C38",
+    "border_subtle": "#1E293B",
+    "border_active": "#3B82F6",
+    "primary_blue": "#2563EB",
+    "primary_blue_hover": "#1D4ED8",
+    "accent_cyan": "#06B6D4",
+    "accent_sky_blue": "#38BDF8",
+    "status_paid": {
+      "bg": "bg-emerald-950/60",
+      "border": "border-emerald-500/40",
+      "text": "text-emerald-400",
+      "badge": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+    },
+    "status_pending": {
+      "bg": "bg-blue-950/60",
+      "border": "border-blue-500/40",
+      "text": "text-blue-400",
+      "badge": "bg-blue-500/10 text-blue-400 border-blue-500/20"
+    },
+    "status_upcoming": {
+      "bg": "bg-amber-950/60",
+      "border": "border-amber-500/40",
+      "text": "text-amber-400",
+      "badge": "bg-amber-500/10 text-amber-400 border-amber-500/20"
+    },
+    "status_overdue": {
+      "bg": "bg-rose-950/60",
+      "border": "border-rose-500/40",
+      "text": "text-rose-400",
+      "badge": "bg-rose-500/10 text-rose-400 border-rose-500/20"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-slate-900/80 border border-slate-800/80 shadow-2xl",
+    "tracing_beam": "relative overflow-hidden before:absolute before:inset-0 before:p-[1px] before:bg-gradient-to-r before:from-blue-500/0 before:via-blue-500/50 before:to-blue-500/0",
+    "card_hover": "transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10",
+    "table_row_hover": "transition-colors duration-150 hover:bg-slate-800/50"
+  },
+  "layouts_and_grids": {
+    "dashboard_summary_bento": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8",
+    "main_content_layout": "min-h-screen bg-[#060A12] text-slate-100 flex flex-col md:flex-row",
+    "sidebar": "w-full md:w-64 bg-[#0B132B] border-r border-slate-800/80 p-6 flex flex-col justify-between",
+    "content_area": "flex-1 p-4 md:p-8 overflow-y-auto"
+  },
+  "key_features_ui": {
+    "dashboard_metrics": "Total emprestado (Total Lent), Total recebido (Total Received), Saldo pendente (Pending), Em atraso (Overdue)",
+    "client_table": "Interactive client list with filter search, status tabs (Todos, Pago, Pendente, A vencer, Atrasado), sorting, bulk/quick actions",
+    "client_form_modal": "Add/Edit Client Form with input validation: Nome, Telefone, Valor Emprestado, Data Empréstimo, Datas de Pagamento, Taxa de Juros (%), Forma de Cobrança (À Vista / Parcelado), Observações",
+    "payment_registration_modal": "Mark Payment Received with amount, date, payment method (PIX, Dinheiro, Transferência), and discount/interest adjustments",
+    "client_detail_drawer": "Slide-over detail sheet showing client profile, summary statistics, loan terms, and chronological payment timeline",
+    "visual_alerts": "High priority alert banner for upcoming payments in 3 days and overdue accounts with quick WhatsApp contact trigger",
+    "auth_page": "Sleek dark blue financial login screen with email/password authentication, JWT storage, pre-filled demo credentials, and show/hide password"
+  },
+  "image_urls": {
+    "login_hero_bg": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "dashboard_analytics_adornment": "https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "charts_visual_texture": "https://images.unsplash.com/photo-1686061592689-312bbfb5c055?crop=entropy&cs=srgb&fm=jpg&q=85"
+  },
+  "instructions_to_main_agent": [
+    "Follow Portuguese language for all UI text and labels (e.g. 'Empréstimos', 'Clientes', 'Registrar Pagamento', 'Atrasado', 'Pago', 'Pendente').",
+    "Use formatters for Brazilian Real currency (R$ 0.000,00) and dates (DD/MM/YYYY).",
+    "All components must be written in React .js / .jsx format (NOT .tsx).",
+    "Ensure every interactive element (buttons, tabs, inputs, modals, table rows, action items, metrics) includes a unambiguous 'data-testid' attribute (kebab-case).",
+    "Integrate Shadcn primitives located in @/components/ui/ (Dialog, Sheet, Select, Tabs, Table, Badge, Input, Button, Card, Calendar, Popover, Sonner) with dark theme overrides.",
+    "Implement Sonner toast notifications for actions like: 'Cliente adicionado com sucesso', 'Pagamento registrado', 'Status atualizado'.",
+    "Add sample Portuguese mock client data (e.g., Carlos Silva, Ana Oliveira, Roberto Santos) so the app looks rich and functional out-of-the-box."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Never use dark colors as high-contrast flat backgrounds without subtle borders or glass effects.",
+    "Do NOT add text-align: center to global App containers.",
+    "Use exact micro-interactions for buttons and list items (hover, focus, transition).",
+    "Avoid AI slop emojis as primary icons. Use lucide-react icons exclusively (e.g., Wallet, Calendar, AlertTriangle, CheckCircle, Clock, UserPlus, Search, Filter, ArrowUpRight, DollarSign).",
+    "Ensure all modals have proper keyboard focus management and dismiss controls."
+  ]
+}

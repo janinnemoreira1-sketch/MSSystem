@@ -1,0 +1,30 @@
+{
+  "summary": "First-finish smoke test for CrediFlux (loan management app). Backend auth, clients CRUD, payments (register + undo), PATCH rebuild, DELETE, and dashboard all working. Frontend login (wrong+correct creds), dashboard load, add-client (À Vista), row rendering, status filter tabs, search, pay-btn payment dialog submit, and logout redirect all passed.",
+  "tested_scope": ["backend", "frontend", "auth", "integration"],
+  "passed": [
+    "GET /api/clients returns 401 when unauthenticated",
+    "POST /api/auth/login with wrong password returns 401 with 'E-mail ou senha inválidos'",
+    "POST /api/auth/login with correct admin creds returns 200 and sets cookies",
+    "GET /api/auth/me returns seeded admin (janinnemoreira1@gmail.com, role=admin)",
+    "GET /api/dashboard/summary returns totals + status counts (200)",
+    "POST /api/clients à vista creates 1 installment, total_due = 1000 * 1.10 = 1100",
+    "POST /api/clients parcelado(3, mensal) creates 3 installments spaced monthly (Feb/Mar/Apr), amount 1100 each, total 3300",
+    "POST /api/clients/{id}/payments marks installment paid, decreases balance",
+    "DELETE /api/clients/{id}/payments/{n} undoes payment (paid=false, total_paid=0)",
+    "PATCH /api/clients/{id} with installments_count=2 rebuilds to 2 installments",
+    "DELETE /api/clients/{id} returns {ok:true}",
+    "Login UI: wrong creds shows login-error 'E-mail ou senha inválidos'",
+    "Login UI: correct creds redirects to Dashboard (dashboard-title visible)",
+    "Add-client dialog opens, submits À Vista client, dialog closes, row appears",
+    "Status filter tabs (filter-atrasado, filter-todos) clickable and change filter",
+    "Search input filters clients by name",
+    "Pay button opens payment-dialog; pd-submit registers payment successfully",
+    "Header menu → logout clears session and redirects to /login"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Status computation observed: created clients with due_date in 2026-01/02 showed 'atrasado' — expected since server date is 2026-09-05 (past those dates). Client detail sheet (installments list + undo per-installment) and alerts banner were not exercised in UI due to time-box; backend for these flows is verified. Test data cleaned up after run."
+}
