@@ -668,19 +668,22 @@ async def seed_admin():
     email = os.environ["ADMIN_EMAIL"].lower().strip()
     password = os.environ["ADMIN_PASSWORD"]
     name = os.environ.get("ADMIN_NAME", "Admin")
+    business = os.environ.get("ADMIN_BUSINESS_NAME", "MS Soluções Financeiras")
     existing = await db.users.find_one({"email": email})
     if not existing:
         await db.users.insert_one({
             "email": email,
             "password_hash": hash_password(password),
             "name": name,
+            "business_name": business,
             "role": "admin",
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
         logger.info(f"Seeded admin user {email}")
-    elif not verify_password(password, existing["password_hash"]):
-        await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(password), "name": name}})
-        logger.info(f"Updated admin password for {email}")
+    elif existing.get("role") != "admin":
+        # promote to admin but never overwrite existing password
+        await db.users.update_one({"email": email}, {"$set": {"role": "admin"}})
+        logger.info(f"Promoted {email} to admin")
 
 
 @app.on_event("startup")
