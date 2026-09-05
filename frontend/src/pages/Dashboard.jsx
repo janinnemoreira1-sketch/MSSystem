@@ -48,6 +48,7 @@ import PaymentDialog from "@/components/PaymentDialog";
 import ClientDetailSheet from "@/components/ClientDetailSheet";
 import CashFlowChart from "@/components/CashFlowChart";
 import MonthlyReportDialog from "@/components/MonthlyReportDialog";
+import AdminUsersDialog from "@/components/AdminUsersDialog";
 
 const FILTERS = [
   { key: "todos", label: "Todos" },
@@ -97,6 +98,7 @@ export default function Dashboard() {
   const [paymentCtx, setPaymentCtx] = useState(null); // {client, installment}
   const [detailClient, setDetailClient] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -221,6 +223,15 @@ export default function Dashboard() {
                   {user?.email}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-700" />
+                {user?.role === "admin" && (
+                  <DropdownMenuItem
+                    onClick={() => setAdminOpen(true)}
+                    data-testid="open-admin-users"
+                    className="cursor-pointer"
+                  >
+                    <Users className="w-4 h-4 mr-2" /> Contas cadastradas
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={logout} data-testid="logout-menu-item" className="cursor-pointer">
                   <LogOut className="w-4 h-4 mr-2" /> Sair
                 </DropdownMenuItem>
@@ -616,6 +627,8 @@ export default function Dashboard() {
         onOpenChange={setReportOpen}
         businessName={user?.business_name || user?.name}
       />
+
+      <AdminUsersDialog open={adminOpen} onOpenChange={setAdminOpen} />
     </div>
   );
 }

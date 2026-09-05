@@ -614,6 +614,54 @@ async def public_receipt(token: str):
 
 
 # -----------------------------------------------------------------------------
+# Admin endpoints (visíveis apenas para role=admin)
+# -----------------------------------------------------------------------------
+def _require_admin(user: dict):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito ao administrador.")
+
+
+@api_router.get("/admin/users")
+async def admin_list_users(user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    users = await db.users.find({}, {"password_hash": 0}).sort("created_at", -1).to_list(500)
+    # Enrich with client counts + totals
+    results = []
+    for u in users:
+        uid = str(u["_id"])
+        clients = [serialize_client(d) async for d in db.clients.find({"owner_id": uid})]
+        total_lent = round(sum(c["loan_amount"] for c in clients), 2)
+        total_paid = round(sum(c["total_paid"] for c in clients), 2)
+        balance = round(sum(c["balance"] for c in clients), 2)
+        results.append({
+            "id": uid,
+            "email": u.get("email"),
+            "name": u.get("name", ""),
+            "business_name": u.get("business_name", ""),
+            "role": u.get("role", "owner"),
+            "created_at": u.get("created_at"),
+            "clients_count": len(clients),
+            "total_lent": total_lent,
+            "total_paid": total_paid,
+            "balance": balance,
+        })
+    return {"users": results, "total": len(results)}
+
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    if user_id == user["id"]:
+        raise HTTPException(status_code=400, detail="Você não pode excluir sua própria conta.")
+    target = await db.users.find_one({"_id": oid(user_id)})
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    await db.clients.delete_many({"owner_id": user_id})
+    await db.users.delete_one({"_id": oid(user_id)})
+    return {"ok": True}
+
+
+# -----------------------------------------------------------------------------
 # Startup
 # -----------------------------------------------------------------------------
 async def seed_admin():
