@@ -1,0 +1,47 @@
+{
+  "summary": "Iteration 2 testing: register endpoint, chart, monthly reports, public receipts, multi-tenant scoping, rebrand and new UI (register page, remind, monthly report dialog, cash flow chart, public receipt page). 13/13 backend tests passing (pytest). All backend endpoints work as specified. Frontend: rebrand OK, go-register OK, register validations + redirect OK, dashboard business_name OK, open-report-btn + report-dialog + report-download-btn OK, cash-flow-chart OK, public receipt page /r/{token} works perfectly with no auth (copy link + baixar PDF buttons present, business name + client + amount rendered), bad token shows receipt-error. Found one integration bug (see action_items) and applied one small backend fix (Installment Pydantic model missing receipt_token field, which broke frontend consumption).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "PaymentDialog receipt buttons after successful payment",
+        "issue": "Dashboard.jsx onSaved handler calls setPaymentCtx(null) immediately after a successful payment, which unmounts PaymentDialog before it can render pd-copy-receipt / pd-open-receipt. As implemented, users never see the 'Copiar recibo' / 'Abrir recibo' buttons on the payment dialog from the Dashboard row flow. The receiptToken state inside PaymentDialog is set correctly but the parent forcibly closes the dialog. Fix: onSaved should NOT close the dialog (or only close on explicit user action). Change Dashboard.jsx line 589-592 to just call load() without setPaymentCtx(null); let PaymentDialog stay open until user clicks 'Fechar' (pd-close).",
+        "affected_selectors": ["[data-testid=pd-copy-receipt]", "[data-testid=pd-open-receipt]"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Dashboard - Fluxo dos últimos 6 meses",
+        "issues": ["Recharts warning: width/height (-1) - container measurement race on first render. Chart still renders on subsequent frame. Consider adding minWidth/minHeight or explicit height to the ResponsiveContainer wrapper."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iter2_results.xml"
+  ],
+  "action_items": [
+    "Dashboard.jsx onSaved for PaymentDialog: remove setPaymentCtx(null) so the receipt buttons (pd-copy-receipt / pd-open-receipt) become visible after a successful payment. Currently the dialog closes immediately and users cannot access those buttons from the row 'Pagar' flow. The receipt buttons in ClientDetailSheet (copy-receipt-{n} / open-receipt-{n}) were not exercised in UI but the same underlying data is now present since backend fix is applied."
+  ],
+  "critical_code_review_comments": [
+    "SERIALIZATION BUG (fixed by test agent): Pydantic Installment model in /app/backend/server.py did not declare `receipt_token`, so it was stripped from every ClientOut response (POST /clients/{id}/payments, GET /clients/{id}, GET /clients). Frontend PaymentDialog and ClientDetailSheet rely on this field. Added `receipt_token: Optional[str] = None`.",
+    "Dashboard onSaved handler prematurely closes PaymentDialog so the newly-added receipt buttons never render (see integration_issues).",
+    "Public receipt endpoint is well-scoped (no auth dep) and correctly returns owner business_name.",
+    "Recharts ResponsiveContainer emits width(-1)/height(-1) warning on first render; consider explicit height."
+  ],
+  "updated_files": [
+    "/app/backend/server.py (added receipt_token field to Installment model)",
+    "/app/backend/tests/backend_test.py (new pytest file, 13 cases)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "90%"},
+  "test_credentials": "Admin janinnemoreira1@gmail.com / Credi@2026! (from /app/memory/test_credentials.md). New users created dynamically via /api/auth/register during tests (TEST_ prefix), cleaned up.",
+  "seed_data_creation": "Created & deleted TEST_UIFlow*, TEST_PubRec, TEST_ReceiptClient clients + several TEST_*@example.com users during tests. Cleanup performed after each test.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend 100% covered (auth register, login regression, /dashboard/chart, /reports/monthly incl 400/401 cases, /receipts/{token} public + 404, multi-tenant). Frontend covered: login rebrand, go-register, register (mismatch + short pwd errors + valid redirect), dashboard header business_name, open-report-btn opens report-dialog with report-download-btn, cash-flow-chart renders, public receipt page /r/{token} works without cookies (business/client/amount/copy-link/print button, error for bad token). NOT verified end-to-end in UI: pd-copy-receipt / pd-open-receipt (blocked by Dashboard.onSaved bug); ClientDetailSheet copy-receipt-{n}/open-receipt-{n}. Remind: DropdownMenuItem calls window.open('https://wa.me/...','_blank') via onClick — implementation is correct (not an <a> tag) but automated href/target check will not work; use popup event listener or intercept window.open in Playwright to verify.",
+  "rca_of_the_issue": "Root cause of receipt-buttons regression: Dashboard.jsx (line ~589) sets paymentCtx=null on onSaved, which triggers PaymentDialog `if (!ctx) return null` early-return, unmounting the receipt-buttons branch. Compounded initially by backend Installment Pydantic model stripping receipt_token (fixed). Reproduction: click Pagar → submit dialog → observe toast 'Pagamento registrado' → dialog closes → no receipt buttons visible. Mitigation: keep dialog mounted in success state (do not null paymentCtx in onSaved) and let user close via pd-close button or explicit onOpenChange."
+}

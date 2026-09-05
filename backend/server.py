@@ -120,11 +120,19 @@ class LoginIn(BaseModel):
     password: str
 
 
+class RegisterIn(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    business_name: Optional[str] = ""
+
+
 class UserOut(BaseModel):
     id: str
     email: EmailStr
     name: str
     role: str = "admin"
+    business_name: Optional[str] = ""
 
 
 class Installment(BaseModel):
@@ -136,6 +144,7 @@ class Installment(BaseModel):
     paid_amount: Optional[float] = None
     payment_method: Optional[str] = None
     note: Optional[str] = None
+    receipt_token: Optional[str] = None
 
 
 class ClientIn(BaseModel):
@@ -280,6 +289,28 @@ def serialize_client(doc: dict) -> dict:
 # -----------------------------------------------------------------------------
 # Auth endpoints
 # -----------------------------------------------------------------------------
+@api_router.post("/auth/register")
+async def register(body: RegisterIn, response: Response):
+    email = body.email.lower().strip()
+    if len(body.password) < 6:
+        raise HTTPException(status_code=400, detail="A senha deve ter ao menos 6 caracteres.")
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
+    doc = {
+        "email": email,
+        "password_hash": hash_password(body.password),
+        "name": body.name.strip() or "Usuário",
+        "business_name": (body.business_name or "").strip(),
+        "role": "owner",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    res = await db.users.insert_one(doc)
+    uid = str(res.inserted_id)
+    set_auth_cookies(response, create_access_token(uid, email), create_refresh_token(uid))
+    return {"id": uid, "email": email, "name": doc["name"], "role": doc["role"], "business_name": doc["business_name"]}
+
+
 @api_router.post("/auth/login")
 async def login(body: LoginIn, request: Request, response: Response):
     email = body.email.lower().strip()
@@ -307,7 +338,7 @@ async def login(body: LoginIn, request: Request, response: Response):
     access = create_access_token(uid, email)
     refresh = create_refresh_token(uid)
     set_auth_cookies(response, access, refresh)
-    return {"id": uid, "email": email, "name": user.get("name", "Admin"), "role": user.get("role", "admin")}
+    return {"id": uid, "email": email, "name": user.get("name", "Admin"), "role": user.get("role", "admin"), "business_name": user.get("business_name", "")}
 
 
 @api_router.post("/auth/logout")
@@ -319,7 +350,8 @@ async def logout(response: Response, user: dict = Depends(get_current_user)):
 
 @api_router.get("/auth/me", response_model=UserOut)
 async def me(user: dict = Depends(get_current_user)):
-    return UserOut(id=user["id"], email=user["email"], name=user.get("name", "Admin"), role=user.get("role", "admin"))
+    return UserOut(id=user["id"], email=user["email"], name=user.get("name", "Admin"),
+                   role=user.get("role", "admin"), business_name=user.get("business_name", ""))
 
 
 # -----------------------------------------------------------------------------
@@ -428,6 +460,8 @@ async def register_payment(client_id: str, body: PaymentIn, user: dict = Depends
             it["paid_amount"] = float(body.paid_amount)
             it["payment_method"] = body.payment_method
             it["note"] = body.note or ""
+            if not it.get("receipt_token"):
+                it["receipt_token"] = secrets.token_urlsafe(16)
             found = True
             break
     if not found:
@@ -477,6 +511,105 @@ async def dashboard_summary(user: dict = Depends(get_current_user)):
         "upcoming": upcoming,
         "paid": paid,
         "pending": pending,
+    }
+
+
+# -----------------------------------------------------------------------------
+# Reports, chart & public receipts
+# -----------------------------------------------------------------------------
+@api_router.get("/dashboard/chart")
+async def dashboard_chart(months: int = 6, user: dict = Depends(get_current_user)):
+    docs = [serialize_client(d) async for d in db.clients.find({"owner_id": user["id"]})]
+    today = datetime.now(timezone.utc).date().replace(day=1)
+    buckets = []
+    for i in range(months - 1, -1, -1):
+        y = today.year
+        m = today.month - i
+        while m <= 0:
+            m += 12
+            y -= 1
+        buckets.append({"key": f"{y:04d}-{m:02d}", "label": f"{m:02d}/{y}", "recebido": 0.0, "previsto": 0.0})
+    idx = {b["key"]: b for b in buckets}
+    for d in docs:
+        for it in d.get("installments", []):
+            due = it["due_date"][:7]
+            if due in idx:
+                idx[due]["previsto"] += it["amount"]
+            if it.get("paid") and it.get("paid_at"):
+                paid_month = it["paid_at"][:7]
+                if paid_month in idx:
+                    idx[paid_month]["recebido"] += it.get("paid_amount") or 0
+    for b in buckets:
+        b["recebido"] = round(b["recebido"], 2)
+        b["previsto"] = round(b["previsto"], 2)
+    return {"buckets": buckets}
+
+
+@api_router.get("/reports/monthly")
+async def monthly_report(year: int, month: int, user: dict = Depends(get_current_user)):
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail="Mês inválido")
+    prefix = f"{year:04d}-{month:02d}"
+    docs = [serialize_client(d) async for d in db.clients.find({"owner_id": user["id"]})]
+    received = []  # payments received in month
+    expected = []  # installments due in month
+    for d in docs:
+        for it in d.get("installments", []):
+            if it["due_date"].startswith(prefix):
+                expected.append({
+                    "client_id": d["id"], "client_name": d["name"], "phone": d.get("phone", ""),
+                    "installment_number": it["number"], "due_date": it["due_date"],
+                    "amount": it["amount"], "paid": bool(it.get("paid")),
+                    "paid_at": it.get("paid_at"), "paid_amount": it.get("paid_amount"),
+                    "payment_method": it.get("payment_method"),
+                })
+            if it.get("paid") and (it.get("paid_at") or "").startswith(prefix):
+                received.append({
+                    "client_id": d["id"], "client_name": d["name"],
+                    "installment_number": it["number"], "paid_at": it["paid_at"],
+                    "paid_amount": it.get("paid_amount") or 0,
+                    "payment_method": it.get("payment_method"),
+                    "receipt_token": it.get("receipt_token"),
+                })
+    total_received = round(sum(r["paid_amount"] for r in received), 2)
+    total_expected = round(sum(e["amount"] for e in expected), 2)
+    outstanding = round(sum(e["amount"] for e in expected if not e["paid"]), 2)
+    return {
+        "year": year, "month": month, "prefix": prefix,
+        "total_received": total_received,
+        "total_expected": total_expected,
+        "outstanding": outstanding,
+        "count_received": len(received),
+        "count_expected": len(expected),
+        "received": sorted(received, key=lambda x: x["paid_at"]),
+        "expected": sorted(expected, key=lambda x: x["due_date"]),
+    }
+
+
+@api_router.get("/receipts/{token}")
+async def public_receipt(token: str):
+    doc = await db.clients.find_one({"installments.receipt_token": token})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Recibo não encontrado")
+    inst = next((i for i in doc.get("installments", []) if i.get("receipt_token") == token), None)
+    if not inst:
+        raise HTTPException(status_code=404, detail="Recibo não encontrado")
+    owner = await db.users.find_one({"_id": ObjectId(doc["owner_id"])})
+    business = (owner or {}).get("business_name") or (owner or {}).get("name") or "MS Soluções Financeiras"
+    return {
+        "business_name": business,
+        "client_name": doc["name"],
+        "client_phone": doc.get("phone", ""),
+        "installment_number": inst["number"],
+        "installments_count": doc.get("installments_count", 1),
+        "amount_due": inst["amount"],
+        "paid_amount": inst.get("paid_amount") or inst["amount"],
+        "paid_at": inst.get("paid_at"),
+        "payment_method": inst.get("payment_method"),
+        "note": inst.get("note", ""),
+        "loan_amount": doc["loan_amount"],
+        "collection_method": doc["collection_method"],
+        "receipt_token": token,
     }
 
 

@@ -15,13 +15,26 @@ import {
   Undo2,
   DollarSign,
   MessageCircle,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { brl, dt, statusMeta, methodLabel } from "@/lib/format";
+import { toast } from "sonner";
 
-export default function ClientDetailSheet({ client, onOpenChange, onPay, onUndo }) {
+export default function ClientDetailSheet({ client, onOpenChange, onPay, onUndo, onRemind }) {
   if (!client) return null;
   const s = statusMeta[client.status] || statusMeta.pendente;
   const waPhone = (client.phone || "").replace(/\D/g, "");
+
+  const copyReceiptLink = async (token) => {
+    const url = `${window.location.origin}/r/${token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link do recibo copiado");
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
 
   return (
     <Sheet open={!!client} onOpenChange={onOpenChange}>
@@ -50,17 +63,28 @@ export default function ClientDetailSheet({ client, onOpenChange, onPay, onUndo 
             <div className="flex items-center gap-2 text-sm text-slate-300">
               <Phone className="w-4 h-4 text-blue-400" />
               {client.phone}
-              {waPhone && (
-                <a
-                  href={`https://wa.me/${waPhone}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-auto inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300"
-                  data-testid="wa-link"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
-                </a>
-              )}
+              <div className="ml-auto flex items-center gap-2">
+                {waPhone && (
+                  <a
+                    href={`https://wa.me/${waPhone}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300"
+                    data-testid="wa-link"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                  </a>
+                )}
+                {client.status !== "pago" && onRemind && (
+                  <button
+                    onClick={onRemind}
+                    className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                    data-testid="detail-remind"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" /> Enviar lembrete
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </SheetHeader>
@@ -136,14 +160,39 @@ export default function ClientDetailSheet({ client, onOpenChange, onPay, onUndo 
                   </div>
                 </div>
                 {it.paid ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    {it.receipt_token && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-slate-400 hover:text-blue-300 h-8"
+                          onClick={() => copyReceiptLink(it.receipt_token)}
+                          data-testid={`copy-receipt-${it.number}`}
+                          title="Copiar link do recibo"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
+                        <a
+                          href={`/r/${it.receipt_token}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 text-slate-400 hover:text-blue-300"
+                          data-testid={`open-receipt-${it.number}`}
+                          title="Abrir recibo"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
                       className="text-slate-400 hover:text-rose-300 h-8"
                       onClick={() => onUndo?.(it)}
                       data-testid={`undo-${it.number}`}
+                      title="Desfazer pagamento"
                     >
                       <Undo2 className="w-3.5 h-3.5" />
                     </Button>

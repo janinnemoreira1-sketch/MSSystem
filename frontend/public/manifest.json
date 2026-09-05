@@ -1,0 +1,26 @@
+{
+  "name": "MS Soluções Financeiras",
+  "short_name": "MS Soluções",
+  "description": "Painel de gestão de empréstimos pessoais — clientes, cobranças e recibos.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060A12",
+  "theme_color": "#060A12",
+  "categories": ["finance", "productivity", "business"],
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

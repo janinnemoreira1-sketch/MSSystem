@@ -38,11 +38,16 @@ import {
   TrendingUp,
   Users,
   Phone,
+  Landmark,
+  MessageCircle,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import ClientFormDialog from "@/components/ClientFormDialog";
 import PaymentDialog from "@/components/PaymentDialog";
 import ClientDetailSheet from "@/components/ClientDetailSheet";
+import CashFlowChart from "@/components/CashFlowChart";
+import MonthlyReportDialog from "@/components/MonthlyReportDialog";
 
 const FILTERS = [
   { key: "todos", label: "Todos" },
@@ -91,6 +96,7 @@ export default function Dashboard() {
 
   const [paymentCtx, setPaymentCtx] = useState(null); // {client, installment}
   const [detailClient, setDetailClient] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -151,6 +157,24 @@ export default function Dashboard() {
     setPaymentCtx({ client: c, installment: next });
   };
 
+  const sendReminder = (c) => {
+    const next = (c.installments || []).find((i) => !i.paid);
+    if (!next) {
+      toast.info("Não há parcelas em aberto para lembrar.");
+      return;
+    }
+    const phone = (c.phone || "").replace(/\D/g, "");
+    if (!phone) {
+      toast.error("Cliente sem telefone. Cadastre um número para enviar o lembrete.");
+      return;
+    }
+    const business = user?.business_name || user?.name || "MS Soluções Financeiras";
+    const dueLabel = new Date(`${next.due_date}T12:00:00`).toLocaleDateString("pt-BR");
+    const valueLabel = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(next.amount);
+    const msg = `Olá ${c.name}, aqui é ${business}. Passando para lembrar do pagamento no valor de ${valueLabel} com vencimento em ${dueLabel}. Qualquer dúvida, é só responder por aqui. Obrigado!`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+  };
+
   return (
     <div className="min-h-screen">
       {/* Top bar */}
@@ -161,11 +185,11 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <Wallet className="w-5 h-5 text-white" />
+              <Landmark className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="text-white font-bold tracking-tight" style={{ fontFamily: "Outfit" }}>
-                CrediFlux
+                {user?.business_name || "MS Soluções Financeiras"}
               </div>
               <div className="text-[10px] uppercase tracking-widest text-slate-400">
                 Painel de Empréstimos
@@ -233,6 +257,14 @@ export default function Dashboard() {
             data-testid="add-client-btn"
           >
             <UserPlus className="w-4 h-4 mr-2" /> Novo cliente
+          </Button>
+          <Button
+            onClick={() => setReportOpen(true)}
+            variant="outline"
+            className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white h-11 px-5 self-start md:self-auto"
+            data-testid="open-report-btn"
+          >
+            <FileText className="w-4 h-4 mr-2" /> Relatório mensal
           </Button>
         </div>
 
@@ -304,6 +336,9 @@ export default function Dashboard() {
             tone="rose"
           />
         </div>
+
+        {/* Cash flow chart */}
+        <CashFlowChart />
 
         {/* Clients table */}
         <div className="glass-card p-4 md:p-6" data-testid="clients-panel">
@@ -501,6 +536,12 @@ export default function Dashboard() {
                                   <Eye className="w-4 h-4 mr-2" /> Detalhes
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
+                                  onClick={() => sendReminder(c)}
+                                  data-testid={`remind-${c.id}`}
+                                >
+                                  <MessageCircle className="w-4 h-4 mr-2" /> Enviar lembrete
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
                                   onClick={() => {
                                     setEditing(c);
                                     setFormOpen(true);
@@ -546,7 +587,6 @@ export default function Dashboard() {
         ctx={paymentCtx}
         onOpenChange={(o) => !o && setPaymentCtx(null)}
         onSaved={() => {
-          setPaymentCtx(null);
           load();
         }}
       />
@@ -557,6 +597,7 @@ export default function Dashboard() {
         onPay={(inst) => {
           setPaymentCtx({ client: detailClient, installment: inst });
         }}
+        onRemind={() => sendReminder(detailClient)}
         onUndo={async (inst) => {
           try {
             await api.delete(`/clients/${detailClient.id}/payments/${inst.number}`);
@@ -568,6 +609,12 @@ export default function Dashboard() {
             toast.error(formatApiError(e));
           }
         }}
+      />
+
+      <MonthlyReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        businessName={user?.business_name || user?.name}
       />
     </div>
   );

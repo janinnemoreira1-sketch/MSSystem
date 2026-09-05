@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, Eye, EyeOff, Loader2, ShieldCheck, TrendingUp } from "lucide-react";
+import { Landmark, Eye, EyeOff, Loader2, ShieldCheck, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Login() {
@@ -50,13 +50,13 @@ export default function Login() {
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/40">
-              <Wallet className="w-6 h-6 text-white" />
+              <Landmark className="w-6 h-6 text-white" />
             </div>
             <div>
               <div className="text-white font-bold text-xl tracking-tight" style={{ fontFamily: "Outfit" }}>
-                CrediFlux
+                MS Soluções Financeiras
               </div>
-              <div className="text-blue-300 text-xs uppercase tracking-widest">Gestão de Empréstimos</div>
+              <div className="text-blue-300 text-xs uppercase tracking-widest">Painel de Empréstimos</div>
             </div>
           </div>
 
@@ -78,7 +78,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="text-xs text-slate-500">© 2026 CrediFlux · Todos os direitos reservados</div>
+          <div className="text-xs text-slate-500">© 2026 MS Soluções Financeiras · Todos os direitos reservados</div>
         </div>
       </div>
 
@@ -91,10 +91,10 @@ export default function Login() {
         >
           <div className="lg:hidden flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-white" />
+              <Landmark className="w-5 h-5 text-white" />
             </div>
-            <div className="text-white font-bold text-lg" style={{ fontFamily: "Outfit" }}>
-              CrediFlux
+            <div className="text-white font-bold text-base" style={{ fontFamily: "Outfit" }}>
+              MS Soluções Financeiras
             </div>
           </div>
 
@@ -167,7 +167,10 @@ export default function Login() {
           </Button>
 
           <p className="text-xs text-slate-500 text-center">
-            Acesso restrito. Aplicativo pessoal de gestão financeira.
+            Ainda não tem um painel?{" "}
+            <Link to="/register" className="text-blue-400 hover:text-blue-300" data-testid="go-register">
+              Criar conta
+            </Link>
           </p>
         </form>
       </div>
