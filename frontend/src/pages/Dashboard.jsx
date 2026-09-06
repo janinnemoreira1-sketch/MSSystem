@@ -193,6 +193,7 @@ export default function Dashboard() {
       {/* Top bar */}
       <header
         className="sticky top-0 z-30 backdrop-blur-xl bg-[#060A12]/85 border-b border-slate-800/80"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
         data-testid="top-header"
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 h-16 sm:h-16 flex items-center justify-between gap-2">
@@ -528,7 +529,7 @@ export default function Dashboard() {
                             onClick={() => openPaymentForNext(c)}
                             data-testid={`pay-btn-${c.id}`}
                           >
-                            <DollarSign className="w-3.5 h-3.5 mr-1" /> Pagar parcela
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Pago
                           </Button>
                         )}
                         <Button
@@ -689,7 +690,7 @@ export default function Dashboard() {
                                 onClick={() => openPaymentForNext(c)}
                                 data-testid={`pay-btn-${c.id}`}
                               >
-                                <DollarSign className="w-3.5 h-3.5 mr-1" /> Pagar
+                                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Pago
                               </Button>
                             )}
                             <DropdownMenu>
