@@ -195,14 +195,14 @@ export default function Dashboard() {
         className="sticky top-0 z-30 backdrop-blur-xl bg-[#060A12]/80 border-b border-slate-800/80"
         data-testid="top-header"
       >
-        <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Logo size={38} />
-            <div>
-              <div className="text-white font-bold tracking-tight" style={{ fontFamily: "Outfit" }}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Logo size={34} />
+            <div className="min-w-0">
+              <div className="text-white font-bold tracking-tight truncate text-sm sm:text-base" style={{ fontFamily: "Outfit" }}>
                 {user?.business_name || "MS Soluções Financeiras"}
               </div>
-              <div className="text-[10px] uppercase tracking-widest text-slate-400">
+              <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 hidden sm:block">
                 Painel de Empréstimos
               </div>
             </div>
@@ -257,69 +257,70 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-4 sm:py-6 md:py-8 space-y-5 md:space-y-8">
         {/* Hero header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-widest text-blue-400 font-semibold mb-2">
+            <div className="text-[10px] sm:text-xs uppercase tracking-widest text-blue-400 font-semibold mb-2">
               Painel de Controle
             </div>
             <h1
-              className="text-3xl sm:text-4xl font-bold text-white tracking-tight"
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight"
               style={{ fontFamily: "Outfit" }}
               data-testid="dashboard-title"
             >
               Olá, {user?.name?.split(" ")[0] || "titular"}.
             </h1>
-            <p className="text-slate-400 mt-1 text-sm">
+            <p className="text-slate-400 mt-1 text-xs sm:text-sm">
               Um panorama rápido dos empréstimos, cobranças e pagamentos em andamento.
             </p>
           </div>
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-500 text-white h-11 px-5 self-start md:self-auto"
-            data-testid="add-client-btn"
-          >
-            <UserPlus className="w-4 h-4 mr-2" /> Novo cliente
-          </Button>
-          <Button
-            onClick={() => setReportOpen(true)}
-            variant="outline"
-            className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white h-11 px-5 self-start md:self-auto"
-            data-testid="open-report-btn"
-          >
-            <FileText className="w-4 h-4 mr-2" /> Relatório mensal
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-500 text-white h-11 px-5"
+              data-testid="add-client-btn"
+            >
+              <UserPlus className="w-4 h-4 mr-2" /> Novo cliente
+            </Button>
+            <Button
+              onClick={() => setReportOpen(true)}
+              variant="outline"
+              className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white h-11 px-5"
+              data-testid="open-report-btn"
+            >
+              <FileText className="w-4 h-4 mr-2" /> Relatório mensal
+            </Button>
+          </div>
         </div>
 
         {/* Alerts */}
         {alerts.length > 0 && (
           <div
-            className="glass-card p-4 md:p-5 border-amber-500/30 bg-amber-500/5 flex items-center gap-4"
+            className="glass-card p-3 sm:p-4 md:p-5 border-amber-500/30 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
             data-testid="alerts-banner"
           >
-            <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-amber-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-amber-200 font-medium">
-                {alerts.length} cliente(s) com pagamento próximo ou em atraso.
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
               </div>
-              <div className="text-xs text-slate-400 truncate">
-                {alerts
-                  .slice(0, 3)
-                  .map((c) => c.name)
-                  .join(" · ")}
-                {alerts.length > 3 && ` +${alerts.length - 3}`}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-amber-200 font-medium">
+                  {alerts.length} cliente(s) com pagamento próximo ou em atraso.
+                </div>
+                <div className="text-xs text-slate-400 truncate">
+                  {alerts.slice(0, 3).map((c) => c.name).join(" · ")}
+                  {alerts.length > 3 && ` +${alerts.length - 3}`}
+                </div>
               </div>
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200"
+              className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200 self-start sm:self-auto"
               onClick={() => setFilter("atrasado")}
               data-testid="alerts-view-btn"
             >
@@ -329,7 +330,7 @@ export default function Dashboard() {
         )}
 
         {/* Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="metrics-grid">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" data-testid="metrics-grid">
           <MetricCard
             testid="metric-total-lent"
             icon={BadgeDollarSign}
@@ -368,14 +369,14 @@ export default function Dashboard() {
         <CashFlowChart />
 
         {/* Clients table */}
-        <div className="glass-card p-4 md:p-6" data-testid="clients-panel">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
+        <div className="glass-card p-3 sm:p-4 md:p-6" data-testid="clients-panel">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4 mb-4 lg:mb-5">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
                 <Users className="w-4 h-4 text-blue-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white" style={{ fontFamily: "Outfit" }}>
+                <h2 className="text-base sm:text-lg font-semibold text-white" style={{ fontFamily: "Outfit" }}>
                   Clientes
                 </h2>
                 <p className="text-xs text-slate-500">
@@ -383,7 +384,7 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
@@ -394,20 +395,22 @@ export default function Dashboard() {
                   data-testid="search-input"
                 />
               </div>
-              <Tabs value={filter} onValueChange={setFilter}>
-                <TabsList className="bg-slate-900/60 border border-slate-800 h-10" data-testid="status-filter-tabs">
-                  {FILTERS.map((f) => (
-                    <TabsTrigger
-                      key={f.key}
-                      value={f.key}
-                      data-testid={`filter-${f.key}`}
-                      className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-300"
-                    >
-                      {f.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+              <div className="-mx-3 sm:mx-0 overflow-x-auto no-scrollbar">
+                <Tabs value={filter} onValueChange={setFilter}>
+                  <TabsList className="bg-slate-900/60 border border-slate-800 h-10 mx-3 sm:mx-0 inline-flex" data-testid="status-filter-tabs">
+                    {FILTERS.map((f) => (
+                      <TabsTrigger
+                        key={f.key}
+                        value={f.key}
+                        data-testid={`filter-${f.key}`}
+                        className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-300 whitespace-nowrap"
+                      >
+                        {f.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              </div>
             </div>
           </div>
 
@@ -436,7 +439,151 @@ export default function Dashboard() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-800/80">
+            <>
+              {/* Mobile card list (< md) */}
+              <div className="md:hidden space-y-2.5" data-testid="clients-mobile">
+                {filtered.map((c) => {
+                  const s = statusMeta[c.status] || statusMeta.pendente;
+                  const dU = daysUntil(c.next_due_date);
+                  return (
+                    <div
+                      key={c.id}
+                      className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-3.5 space-y-3"
+                      data-testid={`client-card-${c.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-slate-100 truncate">{c.name}</div>
+                          {c.phone && (
+                            <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3" /> {c.phone}
+                            </div>
+                          )}
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`${s.bg} ${s.color} ${s.border} font-medium shrink-0`}
+                          data-testid={`status-${c.id}`}
+                        >
+                          <span className={`status-dot mr-1.5 ${s.dot}`} />
+                          {s.label}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-lg bg-slate-900/60 border border-slate-800 p-2">
+                          <div className="text-[10px] uppercase tracking-widest text-slate-500">Empréstimo</div>
+                          <div className="text-slate-100 font-mono font-semibold">{brl(c.loan_amount)}</div>
+                          <div className="text-[11px] text-slate-500 font-mono">
+                            Saldo {brl(c.balance)}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-slate-900/60 border border-slate-800 p-2">
+                          <div className="text-[10px] uppercase tracking-widest text-slate-500">Vencimento</div>
+                          <div className="text-slate-100 font-mono font-semibold">
+                            {c.next_due_date ? dt(c.next_due_date) : "—"}
+                          </div>
+                          {c.next_due_date && (
+                            <div
+                              className={`text-[11px] font-medium ${
+                                dU < 0
+                                  ? "text-rose-400"
+                                  : dU <= 3
+                                    ? "text-amber-400"
+                                    : "text-slate-500"
+                              }`}
+                            >
+                              {dU < 0
+                                ? `${Math.abs(dU)}d em atraso`
+                                : dU === 0
+                                  ? "Vence hoje"
+                                  : `Em ${dU} dias`}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-400 flex items-center justify-between">
+                        <span>
+                          {c.collection_method === "a_vista"
+                            ? "À vista"
+                            : `${c.installments_count}x ${c.collection_frequency || ""}`}
+                        </span>
+                        {c.collection_method === "parcelado" && (
+                          <span className="font-mono text-slate-500">
+                            {brl(c.installment_amount)}/parc
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {c.status !== "pago" && (
+                          <Button
+                            size="sm"
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white h-9"
+                            onClick={() => openPaymentForNext(c)}
+                            data-testid={`pay-btn-${c.id}`}
+                          >
+                            <DollarSign className="w-3.5 h-3.5 mr-1" /> Pagar parcela
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-slate-700 text-slate-200 hover:bg-slate-800 h-9"
+                          onClick={() => setDetailClient(c)}
+                          data-testid={`view-mobile-${c.id}`}
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1" /> Detalhes
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-9 w-9 text-slate-400 hover:text-slate-100 shrink-0"
+                              data-testid={`row-menu-${c.id}`}
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="bg-slate-900 border-slate-700 text-slate-200"
+                          >
+                            <DropdownMenuItem
+                              onClick={() => sendReminder(c)}
+                              data-testid={`remind-${c.id}`}
+                            >
+                              <MessageCircle className="w-4 h-4 mr-2" /> Enviar lembrete
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditing(c);
+                                setFormOpen(true);
+                              }}
+                              data-testid={`edit-${c.id}`}
+                            >
+                              <Pencil className="w-4 h-4 mr-2" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-slate-700" />
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(c)}
+                              className="text-rose-400 focus:text-rose-300"
+                              data-testid={`delete-${c.id}`}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" /> Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table (md+) */}
+              <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-800/80">
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-800 hover:bg-transparent">
@@ -594,7 +741,8 @@ export default function Dashboard() {
                   })}
                 </TableBody>
               </Table>
-            </div>
+              </div>
+            </>
           )}
         </div>
       </main>

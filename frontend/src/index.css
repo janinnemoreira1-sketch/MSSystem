@@ -92,6 +92,15 @@ h5 {
     background: rgba(59, 130, 246, 0.45);
 }
 
+/* Utility to hide scrollbar (mobile filter tabs) while keeping scroll */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 .glass-card {
     background: rgba(17, 28, 56, 0.72);
     backdrop-filter: blur(18px);
