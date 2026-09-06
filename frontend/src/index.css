@@ -39,6 +39,12 @@ body,
     background-color: #060a12;
     color: hsl(var(--foreground));
     min-height: 100vh;
+    /* iOS Safari — respeita a área segura (notch/status bar) */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    box-sizing: border-box;
 }
 
 body {

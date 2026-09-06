@@ -1,0 +1,39 @@
+{
+  "summary": "Frontend-only regression test of the sticky top-header + profile menu mobile fix. Verified at 390x844 (mobile) and 1440x900 (desktop) via a temporary admin user. All acceptance criteria met.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verifications": {
+    "header_safe_area_inline_style": "header data-testid='top-header' has inline style paddingTop='env(safe-area-inset-top)' on both viewports (computed = 0px in Playwright, which is expected — no notch emulated)",
+    "stylesheet_env_rule_present": "html, body, #root rule with padding-top/left/right/bottom: env(safe-area-inset-*) and box-sizing: border-box confirmed in document.styleSheets",
+    "html_body_root_box_sizing": "border-box on <html>, <body>, and #root",
+    "avatar_button_size_mobile": "44x44 (w-11 h-11) — bbox width=44, height=44 (>=40 requirement met)",
+    "avatar_button_size_desktop": "40x40 (sm:w-10 sm:h-10)",
+    "avatar_clickable": "page.click on data-testid='header-menu-btn' succeeded with no pointer intercepts on both viewports",
+    "dropdown_items_present": "open-settings, logout-menu-item visible; open-admin-users visible (user was admin)",
+    "dropdown_item_tap_area": "Each item bbox height = 40px (py-2.5 applied) — meets >=36 requirement",
+    "dropdown_menu_min_width": "270px (>= 220 requirement)",
+    "dropdown_side_offset": "sideOffset=8 verified — content y (62) = button.y(10)+height(44)+8",
+    "dropdown_not_clipped_mobile": "menu bbox x=108,w=270 => right edge=378 <= 390; bottom=233 <= 844 — fully visible",
+    "regression_testids_mobile": "search-input, add-client-btn, open-report-btn, metric-total-lent, metric-total-paid, metric-balance, metric-overdue, cash-flow-chart all present (count=1). clients-mobile count=0 only because the freshly-seeded admin has no clients — NOT a regression (empty state)",
+    "regression_testids_desktop": "same eight testids present (count=1). header-user-name visible on desktop only.",
+    "js_errors": "Only 2 harmless 401s during unauthenticated /login navigation (pre-login /auth/me probes) and recharts width(-1) warnings when chart container mounts before layout — pre-existing, not related to the fix"
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "The env() safe-area padding is applied on both <header> (inline) AND html/body/#root (CSS). This is intentionally redundant for iOS PWA reliability, but on real devices with notch, the inset will be added twice at the top (once to the page container, once to the header via inline style), pushing the sticky header down by ~2 * safe-area-inset-top. Recommend keeping the padding either on the header OR the root, not both. Since the header uses `sticky top-0`, the root padding-top is what actually creates the gap above the sticky element (as the sticky is positioned relative to the root's content box due to box-sizing:border-box). The inline paddingTop on <header> only enlarges the header height and is likely unnecessary. Not blocking, but E1 should confirm the behavior on a real iPhone.",
+    "Recharts warnings 'width(-1) height(-1)' on CashFlowChart mount are pre-existing and noisy — consider wrapping in ResponsiveContainer with an explicit aspect or minHeight to eliminate the warning."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "Created + deleted temporary user test-hdr-1788720848@example.com / TestPass123! (promoted to admin/approved in mongo). User was removed after tests. Marcos account untouched.",
+  "seed_data_creation": "One temporary admin user (deleted after tests).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Header safe-area fix verified. E1 may want to double-check on a real iOS PWA that the header isn't pushed down by 2x the safe-area inset because paddingTop is set on both <header> and html/body/#root.",
+  "rca of the issue": "Original bug: sticky header sat at y=0 on iOS with notch, so status bar overlapped it and the avatar button was un-tappable. Fix adds env(safe-area-inset-top) padding to html/body/#root + inline on header, plus enlarges the tap target to 44x44 on mobile, plus increases dropdown item vertical padding. All acceptance items validated in Playwright — the CSS rule is present and applied even though the emulator resolves env(...) to 0."
+}

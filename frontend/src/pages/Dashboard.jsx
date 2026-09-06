@@ -192,10 +192,10 @@ export default function Dashboard() {
     <div className="min-h-screen">
       {/* Top bar */}
       <header
-        className="sticky top-0 z-30 backdrop-blur-xl bg-[#060A12]/80 border-b border-slate-800/80"
+        className="sticky top-0 z-30 backdrop-blur-xl bg-[#060A12]/85 border-b border-slate-800/80"
         data-testid="top-header"
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 h-16 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Logo size={34} />
             <div className="min-w-0">
@@ -219,15 +219,19 @@ export default function Dashboard() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="w-9 h-9 rounded-full bg-slate-800/60 hover:bg-slate-700/60 text-slate-200"
+                  className="w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-slate-800/60 hover:bg-slate-700/60 text-slate-200 shrink-0"
                   data-testid="header-menu-btn"
                 >
-                  <span className="font-semibold text-sm">
+                  <span className="font-semibold text-base sm:text-sm">
                     {(user?.name || "U").slice(0, 1).toUpperCase()}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-slate-900 border-slate-700 text-slate-200">
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                className="bg-slate-900 border-slate-700 text-slate-200 min-w-[220px]"
+              >
                 <DropdownMenuItem disabled className="text-slate-400">
                   {user?.email}
                 </DropdownMenuItem>
@@ -235,7 +239,7 @@ export default function Dashboard() {
                 <DropdownMenuItem
                   onClick={() => setSettingsOpen(true)}
                   data-testid="open-settings"
-                  className="cursor-pointer"
+                  className="cursor-pointer py-2.5"
                 >
                   <KeyRound className="w-4 h-4 mr-2" /> Alterar senha
                 </DropdownMenuItem>
@@ -243,12 +247,12 @@ export default function Dashboard() {
                   <DropdownMenuItem
                     onClick={() => setAdminOpen(true)}
                     data-testid="open-admin-users"
-                    className="cursor-pointer"
+                    className="cursor-pointer py-2.5"
                   >
                     <Users className="w-4 h-4 mr-2" /> Contas cadastradas
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={logout} data-testid="logout-menu-item" className="cursor-pointer">
+                <DropdownMenuItem onClick={logout} data-testid="logout-menu-item" className="cursor-pointer py-2.5">
                   <LogOut className="w-4 h-4 mr-2" /> Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
