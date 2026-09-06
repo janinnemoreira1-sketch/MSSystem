@@ -264,42 +264,20 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-4 sm:py-6 md:py-8 space-y-5 md:space-y-8">
         {/* Hero header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-          <div>
-            <div className="text-[10px] sm:text-xs uppercase tracking-widest text-blue-400 font-semibold mb-2">
-              Painel de Controle
-            </div>
-            <h1
-              className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight"
-              style={{ fontFamily: "Outfit" }}
-              data-testid="dashboard-title"
-            >
-              Olá, {user?.name?.split(" ")[0] || "titular"}.
-            </h1>
-            <p className="text-slate-400 mt-1 text-xs sm:text-sm">
-              Um panorama rápido dos empréstimos, cobranças e pagamentos em andamento.
-            </p>
+        <div>
+          <div className="text-[10px] sm:text-xs uppercase tracking-widest text-blue-400 font-semibold mb-2">
+            Painel de Controle
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-              className="bg-blue-600 hover:bg-blue-500 text-white h-11 px-5"
-              data-testid="add-client-btn"
-            >
-              <UserPlus className="w-4 h-4 mr-2" /> Novo cliente
-            </Button>
-            <Button
-              onClick={() => setReportOpen(true)}
-              variant="outline"
-              className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white h-11 px-5"
-              data-testid="open-report-btn"
-            >
-              <FileText className="w-4 h-4 mr-2" /> Relatório mensal
-            </Button>
-          </div>
+          <h1
+            className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight"
+            style={{ fontFamily: "Outfit" }}
+            data-testid="dashboard-title"
+          >
+            Olá, {user?.name?.split(" ")[0] || "titular"}.
+          </h1>
+          <p className="text-slate-400 mt-1 text-xs sm:text-sm">
+            Um panorama rápido dos empréstimos, cobranças e pagamentos em andamento.
+          </p>
         </div>
 
         {/* Alerts */}
@@ -375,28 +353,52 @@ export default function Dashboard() {
 
         {/* Clients table */}
         <div className="glass-card p-3 sm:p-4 md:p-6" data-testid="clients-panel">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4 mb-4 lg:mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
-                <Users className="w-4 h-4 text-blue-400" />
+          <div className="flex flex-col gap-3 lg:gap-4 mb-4 lg:mb-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4 text-blue-400" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base sm:text-lg font-semibold text-white" style={{ fontFamily: "Outfit" }}>
+                    Clientes
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {filtered.length} de {clients.length} exibidos
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base sm:text-lg font-semibold text-white" style={{ fontFamily: "Outfit" }}>
-                  Clientes
-                </h2>
-                <p className="text-xs text-slate-500">
-                  {filtered.length} de {clients.length} exibidos
-                </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-500 text-white h-10 px-3 sm:px-4"
+                  data-testid="add-client-btn"
+                >
+                  <UserPlus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Novo cliente</span>
+                </Button>
+                <Button
+                  onClick={() => setReportOpen(true)}
+                  variant="outline"
+                  className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white h-10 px-3 sm:px-4"
+                  data-testid="open-report-btn"
+                >
+                  <FileText className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Relatório</span>
+                </Button>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-              <div className="relative">
+              <div className="relative flex-1">
                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   placeholder="Buscar por nome ou telefone..."
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  className="pl-9 h-10 w-full sm:w-72 bg-slate-900/60 border-slate-700 focus:border-blue-500"
+                  className="pl-9 h-10 w-full sm:max-w-xs bg-slate-900/60 border-slate-700 focus:border-blue-500"
                   data-testid="search-input"
                 />
               </div>
