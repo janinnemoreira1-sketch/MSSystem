@@ -124,13 +124,21 @@ export default function Dashboard() {
   }, []);
 
   const filtered = useMemo(() => {
-    return clients.filter((c) => {
+    const list = clients.filter((c) => {
       const okStatus = filter === "todos" || c.status === filter;
       const okQ =
         !q ||
         c.name.toLowerCase().includes(q.toLowerCase()) ||
         (c.phone || "").includes(q);
       return okStatus && okQ;
+    });
+    // Ordena por próximo vencimento (mais próximo primeiro).
+    // Atrasados (data no passado) ficam no topo; quitados (sem próxima) vão pro fim.
+    return list.sort((a, b) => {
+      const av = a.next_due_date ? new Date(`${a.next_due_date}T12:00:00`).getTime() : Infinity;
+      const bv = b.next_due_date ? new Date(`${b.next_due_date}T12:00:00`).getTime() : Infinity;
+      if (av !== bv) return av - bv;
+      return a.name.localeCompare(b.name, "pt-BR");
     });
   }, [clients, q, filter]);
 
