@@ -24,6 +24,13 @@ root.render(
 
 // PWA — register service worker so users can install on Android/iOS
 if ("serviceWorker" in navigator && window.location.protocol === "https:") {
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data?.type === "SW_UPDATED" && !reloading) {
+      reloading = true;
+      window.location.reload();
+    }
+  });
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
