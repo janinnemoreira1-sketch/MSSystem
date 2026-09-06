@@ -38,9 +38,9 @@ import {
   TrendingUp,
   Users,
   Phone,
-  Landmark,
   MessageCircle,
   FileText,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import ClientFormDialog from "@/components/ClientFormDialog";
@@ -49,6 +49,8 @@ import ClientDetailSheet from "@/components/ClientDetailSheet";
 import CashFlowChart from "@/components/CashFlowChart";
 import MonthlyReportDialog from "@/components/MonthlyReportDialog";
 import AdminUsersDialog from "@/components/AdminUsersDialog";
+import SettingsDialog from "@/components/SettingsDialog";
+import Logo from "@/components/Logo";
 
 const FILTERS = [
   { key: "todos", label: "Todos" },
@@ -99,6 +101,7 @@ export default function Dashboard() {
   const [detailClient, setDetailClient] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -186,9 +189,7 @@ export default function Dashboard() {
       >
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <Landmark className="w-5 h-5 text-white" />
-            </div>
+            <Logo size={38} />
             <div>
               <div className="text-white font-bold tracking-tight" style={{ fontFamily: "Outfit" }}>
                 {user?.business_name || "MS Soluções Financeiras"}
@@ -223,6 +224,13 @@ export default function Dashboard() {
                   {user?.email}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-700" />
+                <DropdownMenuItem
+                  onClick={() => setSettingsOpen(true)}
+                  data-testid="open-settings"
+                  className="cursor-pointer"
+                >
+                  <KeyRound className="w-4 h-4 mr-2" /> Alterar senha
+                </DropdownMenuItem>
                 {user?.role === "admin" && (
                   <DropdownMenuItem
                     onClick={() => setAdminOpen(true)}
@@ -629,6 +637,8 @@ export default function Dashboard() {
       />
 
       <AdminUsersDialog open={adminOpen} onOpenChange={setAdminOpen} />
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }

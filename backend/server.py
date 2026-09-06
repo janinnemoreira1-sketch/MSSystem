@@ -5,12 +5,18 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 import os
+import re
+import ipaddress
 import logging
 import secrets
 from datetime import datetime, timezone, timedelta
+from html import escape
+from html.parser import HTMLParser
 from typing import List, Optional, Annotated, Literal
+from urllib.parse import urlparse
 
 import bcrypt
+import httpx
 import jwt
 from bson import ObjectId
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
@@ -33,6 +39,142 @@ REFRESH_TTL_DAYS = 30
 
 mongo_client = AsyncIOMotorClient(MONGO_URL)
 db = mongo_client[DB_NAME]
+
+# --- Email (Resend via Emergent managed proxy) ---------------------------------
+EMAIL_BASE_URL = "https://integrations.emergentagent.com"
+EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY", "")
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "MS Soluções Financeiras")
+EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+_SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")
+_CRED_ASK = (
+    "reply with your password", "reply with the code", "send your password", "cvv",
+    "send us your password", "enter your password below", "confirm your card number",
+    "your full card number", "seed phrase", "recovery phrase", "verify your card",
+    "social security number", "confirm your bank details",
+    "responda com sua senha", "informe sua senha", "envie sua senha",
+)
+_HOSTISH = re.compile(r"\b(?:https?://)?((?:[a-z0-9-]+\.)+[a-z]{2,})", re.I)
+
+
+def _host_ok(host: str) -> bool:
+    if not host or "xn--" in host:
+        return False
+    try:
+        ipaddress.ip_address(host)
+        return False
+    except ValueError:
+        pass
+    return not any(host == s or host.endswith("." + s) for s in _SHORTENERS)
+
+
+def _same_site(shown: str, real: str) -> bool:
+    return shown == real or real.endswith("." + shown) or shown.endswith("." + real)
+
+
+class _EmailScan(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.tags, self.urls, self.anchors = set(), [], []
+        self._href, self._text = None, []
+
+    def handle_starttag(self, tag, attrs):
+        self.tags.add(tag.lower())
+        self.urls += [v for k, v in attrs if k.lower() in ("href", "src") and v]
+        if tag.lower() == "a":
+            self._href = dict((k.lower(), v) for k, v in attrs).get("href")
+            self._text = []
+
+    def handle_data(self, data):
+        if self._href is not None:
+            self._text.append(data)
+
+    def handle_endtag(self, tag):
+        if tag.lower() == "a" and self._href is not None:
+            self.anchors.append((self._href, "".join(self._text)))
+            self._href, self._text = None, []
+
+
+def _assert_safe_email(subject: str, html: str) -> None:
+    scan = _EmailScan(); scan.feed(html)
+    if scan.tags & {"form", "input", "textarea", "select"}:
+        raise ValueError("Emails não podem conter formulários (G2)")
+    body = f"{subject}\n{html}".lower()
+    for p in _CRED_ASK:
+        if p in body:
+            raise ValueError(f"Email solicita credenciais: {p!r} (G2)")
+    for url in scan.urls:
+        low = url.strip().lower()
+        if low.startswith(("mailto:", "tel:", "cid:", "#")):
+            continue
+        if not low.startswith("https://"):
+            raise ValueError(f"Links/assets devem ser https absolutos: {url!r} (G3)")
+        host = urlparse(low).hostname or ""
+        if not _host_ok(host) or urlparse(low).username is not None:
+            raise ValueError(f"URL encurtada, IP ou com credenciais: {url!r} (G3)")
+    for href, text in scan.anchors:
+        real = urlparse(href.strip().lower()).hostname or ""
+        if not real:
+            continue
+        for m in _HOSTISH.finditer(text):
+            if not _same_site(m.group(1).lower(), real):
+                raise ValueError(f"Texto do link {m.group(1)!r} ≠ host real {real!r} (G3)")
+
+
+async def send_email(*, to: str, subject: str, html: str) -> Optional[str]:
+    if not EMAIL_KEY:
+        logger.warning("EMERGENT_EMAIL_KEY ausente — envio ignorado (to=%s)", to)
+        return None
+    _assert_safe_email(subject, html)
+    payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
+    if EMAIL_REPLY_TO:
+        payload["contact_email"] = EMAIL_REPLY_TO
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(
+                f"{EMAIL_BASE_URL}/api/v1/email/send",
+                headers={"X-Email-Key": EMAIL_KEY},
+                json=payload,
+            )
+        resp.raise_for_status()
+        return resp.json().get("id")
+    except httpx.HTTPStatusError as e:
+        logger.error("Falha no envio de email: %s %s", e.response.status_code, e.response.text)
+        return None
+    except Exception as e:
+        logger.error("Erro no envio de email: %s", e)
+        return None
+
+
+def _wrap_email(title: str, body_html: str, cta_url: Optional[str] = None, cta_text: Optional[str] = None) -> str:
+    cta = ""
+    if cta_url and cta_text:
+        cta = (
+            f'<tr><td align="center" style="padding:20px 0 8px 0">'
+            f'<a href="{escape(cta_url)}" '
+            f'style="display:inline-block;background:#2563eb;color:#ffffff;'
+            f'text-decoration:none;padding:12px 22px;border-radius:10px;'
+            f'font-weight:600;font-family:Arial,sans-serif">{escape(cta_text)}</a>'
+            f"</td></tr>"
+        )
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="background:#0b1424;padding:32px 12px"><tr><td align="center">'
+        '<table role="presentation" width="560" cellpadding="0" cellspacing="0" '
+        'style="max-width:560px;width:100%;background:#0f172a;border:1px solid #1e293b;'
+        'border-radius:16px;overflow:hidden;font-family:Arial,sans-serif;color:#e2e8f0">'
+        '<tr><td style="padding:24px 28px;border-bottom:1px solid #1e293b">'
+        '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#60a5fa;'
+        'font-weight:700">MS Soluções Financeiras</div>'
+        f'<div style="font-size:20px;font-weight:800;color:#ffffff;margin-top:4px">{escape(title)}</div>'
+        '</td></tr>'
+        f'<tr><td style="padding:24px 28px;font-size:14px;line-height:1.6;color:#cbd5e1">{body_html}</td></tr>'
+        f"{cta}"
+        '<tr><td style="padding:18px 28px;border-top:1px solid #1e293b;font-size:11px;color:#64748b">'
+        f'Enviado por {escape(EMAIL_FROM_NAME)}. Nunca pedimos senhas ou dados bancários por email.'
+        '</td></tr></table></td></tr></table>'
+    )
 
 app = FastAPI(title="CrediFlux API")
 api_router = APIRouter(prefix="/api")
@@ -127,12 +269,22 @@ class RegisterIn(BaseModel):
     business_name: Optional[str] = ""
 
 
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class ApprovalIn(BaseModel):
+    status: Literal["approved", "rejected", "pending"]
+
+
 class UserOut(BaseModel):
     id: str
     email: EmailStr
     name: str
     role: str = "admin"
     business_name: Optional[str] = ""
+    status: str = "approved"
 
 
 class Installment(BaseModel):
@@ -303,12 +455,49 @@ async def register(body: RegisterIn, response: Response):
         "name": body.name.strip() or "Usuário",
         "business_name": (body.business_name or "").strip(),
         "role": "owner",
+        "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    res = await db.users.insert_one(doc)
-    uid = str(res.inserted_id)
-    set_auth_cookies(response, create_access_token(uid, email), create_refresh_token(uid))
-    return {"id": uid, "email": email, "name": doc["name"], "role": doc["role"], "business_name": doc["business_name"]}
+    await db.users.insert_one(doc)
+
+    # Envia emails (não falha o cadastro se o envio falhar)
+    try:
+        applicant_name = escape(doc["name"] or email)
+        admin_email = os.environ.get("ADMIN_EMAIL", "").lower().strip()
+        # 1) Boas-vindas ao solicitante
+        welcome_html = _wrap_email(
+            "Cadastro recebido",
+            f"<p>Olá {applicant_name},</p>"
+            f"<p>Recebemos seu cadastro em <strong>MS Soluções Financeiras</strong>. "
+            f"Por segurança, novos painéis passam por aprovação do administrador antes do primeiro acesso.</p>"
+            f"<p>Você receberá outro email assim que a sua conta for aprovada.</p>",
+            cta_url=f"{FRONTEND_URL}/login",
+            cta_text="Abrir painel",
+        )
+        await send_email(to=email, subject="Recebemos seu cadastro — MS Soluções Financeiras", html=welcome_html)
+
+        # 2) Aviso ao administrador
+        if admin_email:
+            admin_html = _wrap_email(
+                "Novo cadastro aguardando aprovação",
+                f"<p>Um novo painel foi solicitado:</p>"
+                f"<ul>"
+                f"<li><strong>Nome:</strong> {applicant_name}</li>"
+                f"<li><strong>E-mail:</strong> {escape(email)}</li>"
+                f"<li><strong>Painel:</strong> {escape(doc.get('business_name') or '-')}</li>"
+                f"</ul>"
+                f"<p>Acesse o painel administrativo para aprovar ou recusar essa solicitação.</p>",
+                cta_url=f"{FRONTEND_URL}/",
+                cta_text="Revisar cadastros",
+            )
+            await send_email(to=admin_email, subject="Novo cadastro aguardando aprovação", html=admin_html)
+    except Exception as e:
+        logger.error("Falha ao notificar cadastro: %s", e)
+
+    return {
+        "status": "pending",
+        "message": "Cadastro recebido. Aguarde a aprovação do administrador para acessar o painel.",
+    }
 
 
 @api_router.post("/auth/login")
@@ -334,11 +523,17 @@ async def login(body: LoginIn, request: Request, response: Response):
 
     await db.login_attempts.delete_one({"identifier": identifier})
 
+    status = user.get("status", "approved")
+    if status == "pending":
+        raise HTTPException(status_code=403, detail="Sua conta está aguardando aprovação do administrador.")
+    if status == "rejected":
+        raise HTTPException(status_code=403, detail="Seu cadastro foi recusado. Entre em contato com o administrador.")
+
     uid = str(user["_id"])
     access = create_access_token(uid, email)
     refresh = create_refresh_token(uid)
     set_auth_cookies(response, access, refresh)
-    return {"id": uid, "email": email, "name": user.get("name", "Admin"), "role": user.get("role", "admin"), "business_name": user.get("business_name", "")}
+    return {"id": uid, "email": email, "name": user.get("name", "Admin"), "role": user.get("role", "admin"), "business_name": user.get("business_name", ""), "status": status}
 
 
 @api_router.post("/auth/logout")
@@ -351,7 +546,21 @@ async def logout(response: Response, user: dict = Depends(get_current_user)):
 @api_router.get("/auth/me", response_model=UserOut)
 async def me(user: dict = Depends(get_current_user)):
     return UserOut(id=user["id"], email=user["email"], name=user.get("name", "Admin"),
-                   role=user.get("role", "admin"), business_name=user.get("business_name", ""))
+                   role=user.get("role", "admin"), business_name=user.get("business_name", ""),
+                   status=user.get("status", "approved"))
+
+
+@api_router.post("/auth/change-password")
+async def change_password(body: ChangePasswordIn, user: dict = Depends(get_current_user)):
+    if len(body.new_password) < 6:
+        raise HTTPException(status_code=400, detail="A nova senha deve ter ao menos 6 caracteres.")
+    if body.new_password == body.current_password:
+        raise HTTPException(status_code=400, detail="A nova senha deve ser diferente da atual.")
+    doc = await db.users.find_one({"_id": oid(user["id"])})
+    if not doc or not verify_password(body.current_password, doc["password_hash"]):
+        raise HTTPException(status_code=401, detail="Senha atual incorreta.")
+    await db.users.update_one({"_id": oid(user["id"])}, {"$set": {"password_hash": hash_password(body.new_password)}})
+    return {"ok": True}
 
 
 # -----------------------------------------------------------------------------
@@ -639,6 +848,7 @@ async def admin_list_users(user: dict = Depends(get_current_user)):
             "name": u.get("name", ""),
             "business_name": u.get("business_name", ""),
             "role": u.get("role", "owner"),
+            "status": u.get("status", "approved"),
             "created_at": u.get("created_at"),
             "clients_count": len(clients),
             "total_lent": total_lent,
@@ -646,6 +856,51 @@ async def admin_list_users(user: dict = Depends(get_current_user)):
             "balance": balance,
         })
     return {"users": results, "total": len(results)}
+
+
+@api_router.patch("/admin/users/{user_id}/status")
+async def admin_change_status(user_id: str, body: ApprovalIn, user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    if user_id == user["id"]:
+        raise HTTPException(status_code=400, detail="Você não pode alterar o próprio status.")
+    target = await db.users.find_one({"_id": oid(user_id)})
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    previous = target.get("status", "approved")
+    await db.users.update_one({"_id": oid(user_id)}, {"$set": {"status": body.status}})
+
+    # Notifica o solicitante apenas quando muda para approved/rejected
+    if body.status != previous and body.status in ("approved", "rejected"):
+        try:
+            recipient = (target.get("email") or "").lower()
+            name = escape(target.get("name") or recipient)
+            if body.status == "approved":
+                html = _wrap_email(
+                    "Cadastro aprovado 🎉",
+                    f"<p>Olá {name},</p>"
+                    f"<p>Boas notícias! Seu painel em <strong>MS Soluções Financeiras</strong> foi "
+                    f"aprovado pelo administrador.</p>"
+                    f"<p>Você já pode entrar com o e-mail cadastrado e começar a registrar seus clientes.</p>",
+                    cta_url=f"{FRONTEND_URL}/login",
+                    cta_text="Entrar no painel",
+                )
+                subject = "Seu painel foi aprovado — MS Soluções Financeiras"
+            else:
+                html = _wrap_email(
+                    "Cadastro não aprovado",
+                    f"<p>Olá {name},</p>"
+                    f"<p>Informamos que sua solicitação de painel em <strong>MS Soluções Financeiras</strong> "
+                    f"não foi aprovada no momento.</p>"
+                    f"<p>Se acredita que houve engano, responda a este email que o administrador pode "
+                    f"revisar sua solicitação.</p>",
+                )
+                subject = "Sobre seu cadastro em MS Soluções Financeiras"
+            if recipient:
+                await send_email(to=recipient, subject=subject, html=html)
+        except Exception as e:
+            logger.error("Falha ao notificar mudança de status: %s", e)
+
+    return {"ok": True, "status": body.status}
 
 
 @api_router.delete("/admin/users/{user_id}")
@@ -677,13 +932,19 @@ async def seed_admin():
             "name": name,
             "business_name": business,
             "role": "admin",
+            "status": "approved",
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
         logger.info(f"Seeded admin user {email}")
-    elif existing.get("role") != "admin":
-        # promote to admin but never overwrite existing password
-        await db.users.update_one({"email": email}, {"$set": {"role": "admin"}})
-        logger.info(f"Promoted {email} to admin")
+    else:
+        updates = {}
+        if existing.get("role") != "admin":
+            updates["role"] = "admin"
+        if existing.get("status") != "approved":
+            updates["status"] = "approved"
+        if updates:
+            await db.users.update_one({"email": email}, {"$set": updates})
+            logger.info(f"Ensured admin flags on {email}")
 
 
 @app.on_event("startup")

@@ -4,7 +4,8 @@ import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Landmark, Eye, EyeOff, Loader2, ShieldCheck, TrendingUp } from "lucide-react";
+import { Eye, EyeOff, Loader2, ShieldCheck, TrendingUp } from "lucide-react";
+import Logo from "@/components/Logo";
 import { toast } from "sonner";
 
 export default function Login() {
@@ -49,9 +50,7 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-t from-[#060A12] via-transparent to-transparent" />
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/40">
-              <Landmark className="w-6 h-6 text-white" />
-            </div>
+            <Logo size={52} />
             <div>
               <div className="text-white font-bold text-xl tracking-tight" style={{ fontFamily: "Outfit" }}>
                 MS Soluções Financeiras
@@ -90,9 +89,7 @@ export default function Login() {
           data-testid="login-form"
         >
           <div className="lg:hidden flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
-              <Landmark className="w-5 h-5 text-white" />
-            </div>
+            <Logo size={44} />
             <div className="text-white font-bold text-base" style={{ fontFamily: "Outfit" }}>
               MS Soluções Financeiras
             </div>
