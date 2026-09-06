@@ -43,19 +43,65 @@ const sheetVariants = cva(
   }
 )
 
-const SheetContent = React.forwardRef(({ side = "right", className, children, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
-      <SheetPrimitive.Close
-        className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </SheetPrimitive.Close>
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-))
+const SheetContent = React.forwardRef(({ side = "right", className, children, ...props }, ref) => {
+  const closeRef = React.useRef(null);
+  const startRef = React.useRef(null);
+
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    startRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+  };
+  const onTouchMove = (e) => {
+    if (!startRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startRef.current.x;
+    const dy = Math.abs(t.clientY - startRef.current.y);
+    if (side === "right" && dx > 80 && dy < 50) {
+      startRef.current = null;
+      closeRef.current?.click();
+    } else if (side === "left" && dx < -80 && dy < 50) {
+      startRef.current = null;
+      closeRef.current?.click();
+    } else if (side === "bottom" && (t.clientY - startRef.current.y) > 100 && Math.abs(dx) < 60) {
+      startRef.current = null;
+      closeRef.current?.click();
+    }
+  };
+  const onTouchEnd = () => { startRef.current = null; };
+
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(sheetVariants({ side }), className)}
+        style={{
+          paddingTop: `calc(1.5rem + env(safe-area-inset-top))`,
+          paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom))`,
+          touchAction: "pan-y",
+        }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        {...props}>
+        {/* Grip visual (mobile) para indicar arraste */}
+        <div
+          aria-hidden
+          className="md:hidden absolute left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-slate-600/70"
+          style={{ top: `calc(0.5rem + env(safe-area-inset-top))` }}
+        />
+        <SheetPrimitive.Close
+          ref={closeRef}
+          className="absolute right-4 rounded-md opacity-90 bg-slate-800/80 hover:bg-slate-700 text-slate-200 p-2 ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none data-[state=open]:bg-secondary z-10"
+          style={{ top: `calc(0.75rem + env(safe-area-inset-top))` }}>
+          <X className="h-4 w-4" />
+          <span className="sr-only">Fechar</span>
+        </SheetPrimitive.Close>
+        {children}
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  );
+})
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
 const SheetHeader = ({
