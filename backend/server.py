@@ -710,6 +710,9 @@ async def dashboard_summary(user: dict = Depends(get_current_user)):
     upcoming = sum(1 for d in docs if d["status"] == "a_vencer")
     paid = sum(1 for d in docs if d["status"] == "pago")
     pending = sum(1 for d in docs if d["status"] == "pendente")
+    pending_registrations = 0
+    if user.get("role") == "admin":
+        pending_registrations = await db.users.count_documents({"status": "pending"})
     return {
         "total_clients": len(docs),
         "total_lent": round(total_lent, 2),
@@ -720,6 +723,7 @@ async def dashboard_summary(user: dict = Depends(get_current_user)):
         "upcoming": upcoming,
         "paid": paid,
         "pending": pending,
+        "pending_registrations": pending_registrations,
     }
 
 
